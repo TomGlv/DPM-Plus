@@ -1,67 +1,72 @@
-﻿import requests
-import time
+import requests
+import os
 
-# ===== CONFIG =====
-API_KEY = "RIOT_KEY"
+# Configuration
+API_KEY = os.getenv("RIOT_KEY")
+WEBHOOK = os.getenv("WEBHOOK")
 GAME_NAME = "Mamad0uBalTr0u"
 TAG_LINE = "669"
-REGION = "europe"        # Pour account-v1 et match-v5
-PLATFORM = "euw1"        # Pour league-v4 (spécifique à ton serveur)
-DISCORD_WEBHOOK = "WEBHOOK"
+REGION = "europe"
+PLATFORM = "euw1"
+FILE_NAME = "last_match.txt"
 
 def get_data(url):
     headers = {"X-Riot-Token": API_KEY}
-    try:
-        res = requests.get(url, headers=headers, timeout=10)
-        return res.json() if res.status_code == 200 else None
-    except:
-        return None
+    res = requests.get(url, headers=headers)
+    return res.json() if res.status_code == 200 else None
 
 def main():
-    # 1. On récupère ton identité
+    # 1. Récupérer le PUUID
     acc = get_data(f"https://{REGION}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/{GAME_NAME}/{TAG_LINE}")
     if not acc: return
     puuid = acc['puuid']
 
-    # 2. Check si un match a eu lieu dans les 12 dernières minutes (720 sec)
-    # On met 12 min pour un cron de 10 min pour éviter les "trous"
-    since = int(time.time()) - 86400
-    m_list = get_data(f"https://{REGION}.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?startTime={since}&count=1")
+    # 2. Récupérer le dernier match (uniquement le plus récent)
+    m_list = get_data(f"https://{REGION}.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?start=0&count=1")
+    if not m_list: return
+    last_match_id = m_list[0]
 
-    if m_list:
-        match_id = m_list[0]
-        game = get_data(f"https://{REGION}.api.riotgames.com/lol/match/v5/matches/{match_id}")
+    # 3. Lire le dernier match enregistré dans la "mémoire"
+    if os.path.exists(FILE_NAME):
+        with open(FILE_NAME, "r") as f:
+            saved_id = f.read().strip()
+    else:
+        saved_id = ""
+
+    # 4. Comparaison
+    if last_match_id != saved_id:
+        # Nouveau match détecté ! On récupère les détails
+        game = get_data(f"https://{REGION}.api.riotgames.com/lol/match/v5/matches/{last_match_id}")
         rank_info = get_data(f"https://{PLATFORM}.api.riotgames.com/lol/league/v4/entries/by-puuid/{puuid}")
         
         if game and rank_info:
             p = next(pl for pl in game['info']['participants'] if pl['puuid'] == puuid)
-            solo = next((i for i in rank_info if i['queueType'] == "RANKED_SOLO_5x5"), None)
+            solo = next((i for i in rank_info if i['queueType'] == "RANKED_SOLO_5x5"), {"tier": "Unranked", "rank": "", "leaguePoints": 0})
             
-            # Calcul KP% et Durée
-            duration_min = game['info']['gameDuration'] / 60
-            team_kills = sum(pl['kills'] for pl in game['info']['participants'] if pl['teamId'] == p['teamId'])
-            kp = round(((p['kills'] + p['assists']) / team_kills) * 100, 1) if team_kills > 0 else 0
-            
-            # Embed Style
+            # Formatage Discord
             color = 0x2ecc71 if p['win'] else 0xe74c3c
             embed = {
-                "username": "OPGG+ Intelligence",
                 "embeds": [{
-                    "title": f"{'🟩' if p['win'] else '🟥'} MATCH ANALYZED | {p['championName'].upper()}",
+                    "title": f"{'🟩' if p['win'] else '🟥'} NOUVELLE GAME ANALYSÉE",
+                    "description": f"Match ID: `{last_match_id}`",
                     "color": color,
-                    "thumbnail": {"url": f"https://ddragon.leagueoflegends.com/cdn/14.1.1/img/champion/{p['championName']}.png"},
                     "fields": [
-                        {"name": "🏆 RANK", "value": f"`{solo['tier']} {solo['rank']}` ({solo['leaguePoints']} LP)", "inline": True},
-                        {"name": "⚔️ KDA", "value": f"`{p['kills']}/{p['deaths']}/{p['assists']}` (KP: `{kp}%`)", "inline": True},
-                        {"name": "💰 CS", "value": f"`{p['totalMinionsKilled'] + p['neutralMinionsKilled']}` (`{round((p['totalMinionsKilled'] + p['neutralMinionsKilled'])/duration_min, 1)}/m`)", "inline": True}
-                    ],
-                    "footer": {"text": f"D4 Tracker • ID: {match_id}"}
+                        {"name": "Champion", "value": f"**{p['championName']}**", "inline": True},
+                        {"name": "Rank", "value": f"{solo['tier']} {solo['rank']} ({solo['leaguePoints']} LP)", "inline": True},
+                        {"name": "KDA", "value": f"{p['kills']}/{p['deaths']}/{p['assists']}", "inline": True}
+                    ]
                 }]
             }
             requests.post(WEBHOOK, json=embed)
-            print(f"Match {match_id} envoyé à Discord.")
+
+            # 5. Mettre à jour la "mémoire"
+            with open(FILE_NAME, "w") as f:
+                f.write(last_match_id)
+            
+            # On signale à GitHub qu'il y a eu un changement de fichier
+            print(f"NEW_MATCH_DETECTED={last_match_id}")
     else:
-        print("Pas de nouveau match détecté.")
+        print("Aucun nouveau match depuis la dernière vérification.")
 
 if __name__ == "__main__":
     main()
