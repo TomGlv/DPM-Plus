@@ -2,12 +2,12 @@
 import time
 
 # ===== CONFIG =====
-API_KEY = "RIOT_KEY"
+API_KEY = "RGAPI-1a9da4c9-728c-4f63-840f-aa29a0150fc0"
 GAME_NAME = "Mamad0uBalTr0u"
 TAG_LINE = "669"
 REGION = "europe"        # Pour account-v1 et match-v5
 PLATFORM = "euw1"        # Pour league-v4 (spécifique à ton serveur)
-DISCORD_WEBHOOK = "WEBHOOK"
+DISCORD_WEBHOOK = "https://discord.com/api/webhooks/1491693754342445216/vOqPiq_danJlw65ZRwCQiEfPAf6iTTsPm3BoGp2RMpTQj9FSupC389Y0DzRmXXAT74o-"
 
 def get_data(url):
     headers = {"X-Riot-Token": API_KEY}
