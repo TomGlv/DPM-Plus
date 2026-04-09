@@ -1,4 +1,4 @@
-name: DPM+
+name: DPM-Plus
 on:
   schedule:
     - cron: '*/10 * * * *'
@@ -8,7 +8,7 @@ jobs:
   check-match:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # Important pour sauvegarder le dernier matchId
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
