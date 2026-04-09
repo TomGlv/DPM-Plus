@@ -1,12 +1,14 @@
 name: DPM+
 on:
   schedule:
-    - cron: '*/10 * * * *' # Toutes les 10 minutes
-  workflow_dispatch: # Permet de cliquer sur "Run" manuellement
+    - cron: '*/10 * * * *' 
+  workflow_dispatch: 
 
 jobs:
   check-match:
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true # Supprime l'avertissement Node.js
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -15,7 +17,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-          cache: 'pip' # Accélère les prochains runs
+          # On a enlevé le cache ici pour éviter l'erreur de fichier manquant
 
       - name: Install Dependencies
         run: pip install requests
