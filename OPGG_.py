@@ -25,7 +25,7 @@ def main():
 
     # 2. Check si un match a eu lieu dans les 12 dernières minutes (720 sec)
     # On met 12 min pour un cron de 10 min pour éviter les "trous"
-    since = int(time.time()) - 720
+    since = int(time.time()) - 86400
     m_list = get_data(f"https://{REGION}.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?startTime={since}&count=1")
 
     if m_list:
