@@ -1,22 +1,26 @@
 name: OPGG+
 on:
   schedule:
-    - cron: '*/10 * * * *' # S'exécute toutes les 10 minutes
-  workflow_dispatch: # Permet de le lancer manuellement pour tester
+    - cron: '*/10 * * * *' # Toutes les 10 minutes
+  workflow_dispatch: # Permet de cliquer sur "Run" manuellement
 
 jobs:
-  build:
+  check-match:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Install dependencies
+          cache: 'pip' # Accélère les prochains runs
+
+      - name: Install Dependencies
         run: pip install requests
-      - name: Run script
+
+      - name: Run Tracker
         env:
           RIOT_KEY: ${{ secrets.RIOT_KEY }}
           WEBHOOK: ${{ secrets.WEBHOOK }}
