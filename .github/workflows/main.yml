@@ -1,4 +1,4 @@
-name: OPGG+
+name: DPM+
 on:
   schedule:
     - cron: '*/10 * * * *' # Toutes les 10 minutes
